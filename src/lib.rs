@@ -19,7 +19,7 @@ pub fn jaro_distance(lhs: &str, rhs: &str) -> f64 {
         let mut matched: Vec<char> = Vec::with_capacity(lhs.len());
         let mut rhs = rhs.to_string();
         for (i, s1) in lhs.chars().enumerate() {
-            let left = i.saturating_sub(limit);
+            let left = min(i.saturating_sub(limit), rhs.len());
             let right = min(i + limit + 1, rhs.len());
             if rhs[left..right].contains(s1) {
                 let index = rhs[left..right].find(s1).expect("index not found") + left;
@@ -34,7 +34,7 @@ pub fn jaro_distance(lhs: &str, rhs: &str) -> f64 {
         let mut matched: Vec<char> = Vec::with_capacity(rhs.len());
         let mut lhs = lhs.to_string();
         for (i, s2) in rhs.chars().enumerate() {
-            let left = i.saturating_sub(limit);
+            let left = min(i.saturating_sub(limit), lhs.len());
             let right = min(i + limit + 1, lhs.len());
             if lhs[left..right].contains(s2) {
                 let index = lhs[left..right].find(s2).expect("index not found") + left;
@@ -86,9 +86,21 @@ impl PrefixLength {
 }
 
 /// Calculates the Jaro-Winkler distance between two strings.
+///
 /// The returned score is normalized to be between 0.0 and 1.0.
 /// 0 means completely same.
 /// 1 means no similarity.
+///
+/// ## Example
+///
+/// ```
+/// use jaro_winkler_distance::{jaro_winkler_distance, PrefixLength};
+///
+/// let s1 = "MARTHA";
+/// let s2 = "MARHTA";
+/// let distance = jaro_winkler_distance(s1, s2, &PrefixLength::Four);
+/// assert_eq!(distance, 0.9611111111111111);
+/// ```
 pub fn jaro_winkler_distance(lhs: &str, rhs: &str, prefix_length: &PrefixLength) -> f64 {
     let jaro_distance = jaro_distance(lhs, rhs);
 
@@ -144,6 +156,22 @@ mod tests {
     }
 
     #[test]
+    fn jaro_distance_different_string_length() {
+        test_jaro_distance("hello", "helloworld", 0.8333333333333333);
+        test_jaro_distance("helloworld", "hello", 0.8333333333333333);
+        test_jaro_distance(
+            "wor",
+            "helloworldfjieai923489jic90djc03jkajdfslci",
+            0.5793650793650793,
+        );
+        test_jaro_distance(
+            "helloworldfjieai923489jic90djc03jkajdfslci",
+            "wor",
+            0.5793650793650793,
+        );
+    }
+
+    #[test]
     fn jaro_distance_completely_same_or_diffirent() {
         test_jaro_distance("hello", "hello", 1.0);
         test_jaro_distance("", "helloworld", 0.0);
@@ -164,6 +192,22 @@ mod tests {
         test_jaro_winkler_distance("martha", "marhat", 0.9611111111111111);
         test_jaro_winkler_distance("saturday", "sunday", 0.7775);
         test_jaro_winkler_distance("abcdefg", "abcdzxy", 0.8285714285714285);
+    }
+
+    #[test]
+    fn jaro_winkler_distance_different_string_length() {
+        test_jaro_winkler_distance("hello", "helloworld", 0.8999999999999999);
+        test_jaro_winkler_distance("helloworld", "hello", 0.8999999999999999);
+        test_jaro_winkler_distance(
+            "wor",
+            "helloworldfjieai923489jic90djc03jkajdfslci",
+            0.5793650793650793,
+        );
+        test_jaro_winkler_distance(
+            "helloworldfjieai923489jic90djc03jkajdfslci",
+            "wor",
+            0.5793650793650793,
+        );
     }
 
     #[test]
